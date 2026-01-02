@@ -46,8 +46,9 @@ CartItem        Individual items in a cart                  Customer manages; Ad
 Order           Completed purchases                         Customer places; Admin manages fulfillment
 OrderItem       Products in an order                        System generates; Admin/Customer views
 Inventory       Tracks stock                                Admin manages; System updates after orders
-Coupon          Discount codes                              Admin manages; Customer applies
+Coupon          Discount codes                              Admin manages; Customer applies on checkout
 Payment         Tracks payment status                       Customer initiates; System processes; Admin monitors
+PaymentMethod   stores different payment method options     Admin manages; customers view and choose a method
 Review          Customer product ratings                    Customer creates; Admin moderates
 Wishlist        Customer saved items                        Customer manages
 
@@ -194,6 +195,14 @@ Endpoint            Method      Description                         Access
 /payments/{id}/     GET         View payment status                 Customer/Admin
 /admin/payments/    GET         Admin view of all payments          Admin
 
+
+# PaymentMethod
+Endpoint	                Method	        Purpose	                    Access
+/payment-methods/	        GET	            List all payment methods	Customer/Admin
+/payment-methods/{id}/	    GET	            Get one payment method	    Customer/Admin
+/payment-methods/	        POST	        Create payment method	    Admin only
+/payment-methods/{id}/	    PUT/PATCH	    Update payment method	    Admin only
+/payment-methods/{id}/	    DELETE	        Delete payment method	    Admin only
 
 # Coupon / Discount Codes
 Endpoint                   Method             Description                   Access
