@@ -53,6 +53,10 @@ Review          Customer product ratings                    Customer creates; Ad
 Wishlist        Customer saved items                        Customer manages
 
 
+## Entity Relationship Diagram
+<img width="810" height="683" alt="BudgetFlow ERD drawio" src="https://github.com/user-attachments/assets/04b9c2d4-3c8e-454a-888c-e6d5d2ab1f52" />
+
+
 ## Functional Requirements
 # Authentication & Authorization:
 Customer registration and login (JWT/Token-based auth)
