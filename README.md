@@ -53,6 +53,9 @@ Review          Customer product ratings                    Customer creates; Ad
 Wishlist        Customer saved items                        Customer manages
 
 
+## Entity Relationship Diagram
+
+
 ## Functional Requirements
 # Authentication & Authorization:
 Customer registration and login (JWT/Token-based auth)
