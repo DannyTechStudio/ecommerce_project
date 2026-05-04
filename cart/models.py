@@ -21,6 +21,8 @@ class Cart(models.Model):
     status = models.CharField(max_length=15, choices=CartStatus.choices, default=CartStatus.ACTIVE)
     locked_at = models.DateTimeField(null=True, blank=True)
     expires_at = models.DateTimeField(null=True, blank=True)
+    coupon = models.ForeignKey("promotion.Coupon", null=True, blank=True, on_delete=models.SET_NULL, related_name="carts")
+    discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
