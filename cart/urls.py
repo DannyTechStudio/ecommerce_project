@@ -1,6 +1,8 @@
 from django.urls import path
 from .views import (
     CartView,
+    ApplyCouponView,
+    RemoveCouponView,
     AddToCartView,
     UpdateCartItemView,
     RemoveCartItemView,
@@ -14,6 +16,8 @@ from .views import (
 urlpatterns = [
     path("", CartView.as_view(), name="cart-detail"),
     path("add/", AddToCartView.as_view(), name="cart-add"),
+    path("coupon/", ApplyCouponView.as_view(), name="apply-coupon"),
+    path("coupon/", RemoveCouponView.as_view(), name="remove-coupon"),
     path("items/<uuid:item_id>/update/", UpdateCartItemView.as_view(), name="cart-item-update"),
     path("items/<uuid:item_id>/remove/", RemoveCartItemView.as_view(), name="cart-item-remove"),
     path("checkout/", CheckoutCartView.as_view(), name="cart-checkout"),
