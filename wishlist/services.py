@@ -3,7 +3,7 @@ from django.db import transaction
 from .models import WishList, WishListItem
 
 from catalog.models import Product
-from cart.models import Cart, CartItem
+from cart.models import CartItem
 from cart.services import CartService
 
 
