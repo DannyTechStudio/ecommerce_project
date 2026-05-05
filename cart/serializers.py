@@ -32,6 +32,13 @@ class CartSerializer(serializers.ModelSerializer):
         ]
 
 
+class ApplyCouponSerializer(serializers.Serializer):
+    code = serializers.CharField(max_length=50)
+    
+    def validate_code(self, value):
+        return value.strip().upper()
+
+
 class AddToCartSerializer(serializers.Serializer): 
     product_id = serializers.UUIDField()
     quantity = serializers.IntegerField(min_value=1, default=1)
