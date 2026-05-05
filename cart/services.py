@@ -1,12 +1,9 @@
 from django.db import transaction
 from django.utils import timezone
 from django.contrib.auth.models import AnonymousUser
-from django.db.models import F, Sum
 
 from catalog.models import Product
 from .models import Cart, CartItem, CartStatus
-from promotion.services import CouponService
-
 from order.services import OrderService
 
 
@@ -24,20 +21,9 @@ class CartService:
     
     
     @staticmethod
-    def auto_restore_locked_cart(cart: Cart):
-        if cart.status == CartStatus.LOCKED and cart.locked_at and cart.locked_at + CartService.CART_LOCK_TTL < timezone.now():
-            cart.status = CartStatus.ACTIVE
-            cart.locked_at = None
-            cart.save(update_fields=["status", "locked_at"])
-    
-    
-    @staticmethod
     @transaction.atomic
     def get_or_create_active_cart(user):
-        """
-            Returns active cart or creates a new one if expired or None
-        """
-        CartService._ensure_authenticated(user)
+        CartService._ensure_authenticated(user=user)
         
         cart = (
             Cart.objects
@@ -46,13 +32,11 @@ class CartService:
             .first()
         )
         
-        # Expire cart if past TTL
         if cart and cart.expires_at < timezone.now():
             cart.status = CartStatus.EXPIRED
             cart.save(update_fields=["status"])
             cart = None
         
-        # Create cart if None exsits and return as ACTIVE
         if not cart:
             cart = Cart.objects.create(
                 user=user,
@@ -70,103 +54,54 @@ class CartService:
 
     
     @staticmethod
-    def lock_cart(cart: Cart):
-        cart.status = CartStatus.LOCKED
-        cart.locked_at = timezone.now()
-        cart.save(update_fields=["status", "locked_at"])
-
-        
-    @staticmethod
-    def expire_cart(cart: Cart):
-        if cart.status != CartStatus.ACTIVE:
-            raise ValueError("Cart not found or locked")
-        
-        if cart.expires_at < timezone.now():
-            cart.status = CartStatus.EXPIRED
-            cart.save(update_fields=["status"])
-    
-    
-    @staticmethod
-    def get_cart_subtotal(cart: Cart):
-        result = CartItem.objects.filter(cart=cart).aggregate(
-            subtotal=Sum(F("price_snapshot") * F("quantity"))
-        )
-        
-        return result["subtotal"] or 0
-    
-    
-    @staticmethod
-    def get_cart_total(cart: Cart):
-        subtotal = CartService.get_cart_subtotal(cart)
-        discount = cart.discount_amount or 0
-        return max(subtotal - discount, 0)
-        
-    
-    @staticmethod
     def apply_coupon_to_cart(cart: Cart, coupon):
-        discount_amount = CouponService.calculate_discount(cart, coupon)
-        
-        cart.coupon = coupon
-        cart.discount_amount = discount_amount
-        cart.save(update_fields=["coupon", "discount_amount"])
-        
-        return cart
+        from promotion.services import CouponService
+        return CouponService.apply_coupon(cart, coupon)    
     
     
     @staticmethod
     def remove_coupon_from_cart(cart: Cart):
-        cart.coupon = None
-        cart.discount_amount = 0
-        cart.save(update_fields=["coupon", "discount_amount"])
-        return cart
+        from promotion.services import CouponService
+        return CouponService.remove_coupon(cart=cart)
     
     
     @staticmethod
     def revalidate_cart_coupon(cart: Cart):
+        from promotion.services import CouponService
+        
         if not cart.coupon:
             return cart
+        
         try:
-            CouponService.validate_coupon(
-                user=cart.user, 
-                cart=cart, 
-                coupon=cart.coupon
-            )
-            return CartService.apply_coupon_to_cart(
+            return CouponService.apply_coupon(
                 cart=cart, 
                 coupon=cart.coupon
             )
         except ValueError:
-            return CartService.remove_coupon_from_cart(cart)
+            return CouponService.remove_coupon(cart=cart)
     
     
     @staticmethod
     @transaction.atomic
     def add_to_cart(user, product_id, quantity):
-        # Validates user is authenticated
         CartService._ensure_authenticated(user)
         
-        # Validates quantity
         if quantity <= 0:
             raise ValueError("Quantity must be positive.")
         
-        # Get product with row-level lock
         product = Product.objects.select_for_update().filter(id=product_id, is_active=True).first()
         
-        # Validates product exists
         if not product:
             raise ValueError("Product not found or inactive.")
         
-        # Validate stock
         if quantity > product.quantity:
-            raise ValueError("Insufficient stock available.")
+            raise ValueError("Insufficient stock")
         
-        # Get or create active cart
         cart = CartService.get_or_create_active_cart(user)
         
         # Lock cart row
         cart = Cart.objects.select_for_update().get(id=cart.id)  
         
-        # Create new cart item
         cart_item, created = CartItem.objects.get_or_create( 
             cart=cart,
             product=product,
@@ -176,35 +111,19 @@ class CartService:
             }
         )
         
-        # if item exists increase its quantity
         if not created:
             new_quantity = cart_item.quantity + quantity
             
             if new_quantity > product.quantity:
-                raise ValueError("Insufficient stock available.")
+                raise ValueError("Insufficient stock")
             
             cart_item.quantity = new_quantity
             cart_item.save(update_fields=["quantity"])
             
-        # Then extend cart time-to-live duration and return it
         CartService.extend_cart_ttl(cart)
-        
-        # Finally revalidate coupon if exists
         CartService.revalidate_cart_coupon(cart)
         
         return cart
-    
-
-    @staticmethod
-    @transaction.atomic
-    def consume_cart(cart: Cart):
-        cart = Cart.objects.select_for_update().get(id=cart.id)
-        
-        if cart.status != CartStatus.LOCKED:
-            raise ValueError("Only locked cart be consumed.")
-        
-        cart.status = CartStatus.CONSUMED
-        cart.save(update_fields=["status"])
         
         
     @staticmethod
@@ -232,7 +151,6 @@ class CartService:
         item.save(update_fields=["quantity"])
         
         cart = item.cart
-        
         CartService.extend_cart_ttl(cart)
         CartService.revalidate_cart_coupon(cart)
         
@@ -242,8 +160,9 @@ class CartService:
     @staticmethod
     @transaction.atomic
     def remove_cart_item(item):
-        cart = item.cart
+        CartService._ensure_authenticated(item.cart__user)
         
+        cart = item.cart
         item.delete()
         
         CartService.extend_cart_ttl(cart)
@@ -265,18 +184,16 @@ class CartService:
             .first()
         )
         
-        # Validate cart exixts   
         if not cart:
             raise ValueError("No active cart found.")
         
-        # Expiry check
         if cart.expires_at < timezone.now():
             cart.status = CartStatus.EXPIRED
             cart.save(update_fields=["status"])
             raise ValueError("Cart expired")
         
-        # Revalidate coupon before checkout
-        CartService.revalidate_cart_coupon(cart)
+        from promotion.services import CouponService
+        CouponService.validate_before_checkout(user=user, cart=cart)
         
         # Lock cart items + products in one query
         items = list(
@@ -285,7 +202,7 @@ class CartService:
             .select_for_update(of=("self", "product"))
         )
         
-        # validate cart has items
+        # validate cart is not empty
         if not items:
             raise ValueError("Cart is empty")
         
@@ -310,3 +227,5 @@ class CartService:
             "order": order, 
             "cart": cart, 
         }
+        
+        
