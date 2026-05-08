@@ -43,7 +43,7 @@ class CartService:
                 status=CartStatus.ACTIVE,
                 expires_at=timezone.now() + CartService.CART_TTL
             )
-        
+            
         return cart
     
     
@@ -160,7 +160,7 @@ class CartService:
     @staticmethod
     @transaction.atomic
     def remove_cart_item(item):
-        CartService._ensure_authenticated(item.cart__user)
+        CartService._ensure_authenticated(item.cart.user)
         
         cart = item.cart
         item.delete()
