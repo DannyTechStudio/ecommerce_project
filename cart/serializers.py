@@ -20,16 +20,37 @@ class CartItemSerializer(serializers.ModelSerializer):
         
 class CartSerializer(serializers.ModelSerializer):
     items = CartItemSerializer(many=True, read_only=True)
+    item_count = serializers.SerializerMethodField()
     status = serializers.CharField(read_only=True)
+    subtotal = serializers.SerializerMethodField()
+    total = serializers.SerializerMethodField()
     
     class Meta:
         model = Cart
         fields = [
             "id",
+            "coupon",
             "status",
             "expires_at",
+            "subtotal",
+            "total",
             "items",
+            "item_count",
         ]
+        
+    def get_subtotal(self, obj):
+        return sum(
+            item.quantity * item.price_snapshot for item in obj.items.all()
+        )
+        
+    def get_total(self, obj):
+        subtotal = self.get_subtotal(obj)
+        total = subtotal - obj.discount_amount
+        
+        return total
+        
+    def get_item_count(self, obj):
+        return obj.items.count()
 
 
 class ApplyCouponSerializer(serializers.Serializer):
