@@ -22,7 +22,9 @@ class CartView(APIView):
     """
     def get(self, request):
         cart = CartService.get_or_create_active_cart(request.user)
-        return Response(CartSerializer(cart).data)
+        serializer = CartSerializer(cart)
+        
+        return Response(serializer.data)
 
 
 class ApplyCouponView(APIView):
@@ -40,7 +42,7 @@ class ApplyCouponView(APIView):
             coupon = CouponService.validate_coupon(
                 user=request.user,
                 cart=cart,
-                coupon_code=code
+                coupon=code
             )
             
             CartService.apply_coupon_to_cart(cart, coupon)
