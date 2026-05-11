@@ -19,7 +19,12 @@ class CouponService:
     def validate_coupon(user, cart: Cart, coupon: Coupon):
         now = timezone.now()
         
-        if not coupon.is_active:
+        try:
+            coupon = Coupon.objects.get(code=coupon)
+        except Coupon.DoesNotExist:
+            raise ValueError("Invalid coupon code")
+        
+        if coupon.is_active is not True:
             raise ValueError("Coupon is not active")
         
         if coupon.valid_from and now < coupon.valid_from:
@@ -44,7 +49,7 @@ class CouponService:
         if coupon.first_time_user_only and Order.objects.filter(user=user, status=OrderStatus.DELIVERED).exists():
             raise ValueError("Please this coupon is only for first-time customers")
         
-        if not CouponService.is_coupon_applicable_to_cart_items(cart, coupon):
+        if not CouponService._is_applicable(cart, coupon):
             raise ValueError("Coupon is not applicable to any items in the cart")
     
         return coupon
@@ -52,6 +57,9 @@ class CouponService:
     
     @staticmethod
     def apply_coupon(cart: Cart, coupon: Coupon):
+        if cart.coupon:
+            raise ValueError("A coupon has already been applied to this cart")
+        
         CouponService.validate_coupon(cart.user, cart, coupon)
         
         discount = CouponService.calculate_discount(cart, coupon)
@@ -60,7 +68,10 @@ class CouponService:
         cart.discount_amount = discount
         cart.save(update_fields=["coupon", "discount_amount"])
         
-        return cart
+        return {
+            "cart": cart,
+            "detail": "Coupon added successfully"
+        }
 
 
     @staticmethod
@@ -86,7 +97,10 @@ class CouponService:
         cart.discount_amount = 0
         cart.save(update_fields=["coupon", "discount_amount"])
         
-        return cart
+        return {
+            "cart": cart,
+            "detail": "Coupon removed successfully",
+        }
     
     
     @staticmethod
