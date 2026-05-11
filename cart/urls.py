@@ -16,8 +16,8 @@ from .views import (
 urlpatterns = [
     path("", CartView.as_view(), name="cart-detail"),
     path("add/", AddToCartView.as_view(), name="cart-add"),
-    path("coupon/", ApplyCouponView.as_view(), name="apply-coupon"),
-    path("coupon/", RemoveCouponView.as_view(), name="remove-coupon"),
+    path("coupon/apply/", ApplyCouponView.as_view(), name="apply-coupon"),
+    path("coupon/remove/", RemoveCouponView.as_view(), name="remove-coupon"),
     path("items/<uuid:item_id>/update/", UpdateCartItemView.as_view(), name="cart-item-update"),
     path("items/<uuid:item_id>/remove/", RemoveCartItemView.as_view(), name="cart-item-remove"),
     path("checkout/", CheckoutCartView.as_view(), name="cart-checkout"),
