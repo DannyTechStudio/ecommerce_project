@@ -3,14 +3,15 @@ from decimal import Decimal
 from django.db import transaction, IntegrityError
 from django.utils import timezone
 
+from accounts.models import Address
 from .models import OrderStatus, Order, OrderItem
-from cart.models import CartStatus
+from cart.models import Cart, CartStatus
 
 class OrderService:
     DEFAULT_CURRENCY = "GHS"
     
     @staticmethod
-    def copy_shipping_snapshot(order, address):
+    def copy_shipping_snapshot(order: Order, address: Address):
         order.shipping_full_name = address.full_name
         order.shipping_line1 = getattr(address, "line1", "")
         order.shipping_line2 = getattr(address, "line2", "")
@@ -38,7 +39,7 @@ class OrderService:
     
     @staticmethod
     @transaction.atomic
-    def create_order_from_cart(user, cart, address):
+    def create_order_from_cart(user, cart: Cart, address: Address):
         # Validate user address ownership
         if address.user != user:
             raise ValueError("Address does not belong to user")
@@ -122,7 +123,7 @@ class OrderService:
     
     
     @staticmethod
-    def cancel_order(order):
+    def cancel_order(order: Order):
         if order.status == OrderStatus.CANCELED:
             return order
         
@@ -136,7 +137,7 @@ class OrderService:
         
             
     @staticmethod
-    def mark_as_paid(order):
+    def mark_as_paid(order: Order):
         if order.status == OrderStatus.PAID:
             return order
         
@@ -151,7 +152,7 @@ class OrderService:
 
     
     @staticmethod
-    def mark_as_shipped(order):
+    def mark_as_shipped(order: Order):
         if order.status != OrderStatus.PAID:
             raise ValueError("Only paid orders can be marked as shipped")
         
@@ -162,7 +163,7 @@ class OrderService:
 
     
     @staticmethod
-    def mark_as_delivered(order):
+    def mark_as_delivered(order: Order):
         if order.status != OrderStatus.SHIPPED:
             raise ValueError("Only shipped orders can be marked as delivered")
         
