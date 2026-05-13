@@ -5,7 +5,7 @@ from django.utils import timezone
 import requests
 from django.conf import settings
 
-from .models import Payment, PaymentStatus
+from .models import Payment, PaymentStatus, PaymentMethod
 from .providers.paystack import PaystackService
 
 from catalog.models import Product
@@ -33,7 +33,7 @@ class PaymentService:
     
     
     @staticmethod
-    def initiate_payment(order, method):
+    def initiate_payment(order: Order, method: PaymentMethod):
         # Validate order status
         if order.status != OrderStatus.PENDING:
             raise ValueError("Payment can be only made for pending orders")
