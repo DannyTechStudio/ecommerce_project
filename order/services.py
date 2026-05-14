@@ -174,7 +174,6 @@ class OrderService:
     
     
     @staticmethod
-    @transaction.atomic
     def pay_order(user, order_id, payment_method_id):
         order = (
             Order.objects
@@ -196,10 +195,10 @@ class OrderService:
         
         # Check existing payment
         existing_payment = Payment.objects.filter(order=order).first()
+        if existing_payment and existing_payment.payment_url:
+            return existing_payment         # reuse 
+        
         if existing_payment:
-            if existing_payment.payment_url:
-                return existing_payment         # reuse 
-            else:
                 existing_payment.delete()       # cleanup broken one
         
         # Fetch payment method
