@@ -38,12 +38,12 @@ class PaymentService:
         if order.status != OrderStatus.PENDING:
             raise ValueError("Payment can be only made for pending orders")
         
-        if Payment.objects.filter(order=order).exists():
-            raise ValueError("Payment already exists for this order")
-        
         # Validate payment method
         if not method.is_active:
-            raise ValueError("Payment method is not active")
+            raise ValueError("Inactive payment method")
+        
+        if Payment.objects.filter(order=order).exists():
+            raise ValueError("Payment already exists for this order")
         
         # Create payment record
         payment = Payment.objects.create(
@@ -62,7 +62,7 @@ class PaymentService:
             
             payment.payment_url = response.get("authorization_url")
             payment.provider_reference = response.get("reference", "")
-            payment.save(update_fields=["provider_reference"])
+            payment.save(update_fields=["payment_url", "provider_reference"])
             
             return payment
 
