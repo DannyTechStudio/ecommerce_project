@@ -16,7 +16,7 @@ __pycache__/
 
 
 # Virtual environments
-.ecomm_env
+.retailprime_env
 
 
 # HTTP test files
@@ -24,3 +24,7 @@ __pycache__/
 
 # product image folder
 product_images
+
+
+# Ignore test folder and files
+all_test_files
