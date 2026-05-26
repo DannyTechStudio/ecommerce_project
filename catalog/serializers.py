@@ -122,7 +122,6 @@ class ProductImageWriteSerializer(serializers.ModelSerializer):
         
         # Image size check(2MB)
         if image.size > 2 * 1024 * 1024:
-
             raise serializers.ValidationError('Image must not exceed 2MB')
         
         # Duplicate image check (content-based)
